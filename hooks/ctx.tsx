@@ -1,107 +1,100 @@
-import { useContext, createContext, type PropsWithChildren, useEffect } from 'react';
-import { useStorageState } from './useStorageState';
-import { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } from '@react-native-google-signin/google-signin';
-import { createUser, getUserByGoogleId } from '@/db/user';
+import { useContext, createContext, type PropsWithChildren } from "react";
+import { useStorageState } from "./useStorageState";
+import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
+import { createUser, getUserByGoogleId } from "@/db/user";
 
-const AuthContext = createContext<{
-  signIn: () => void;
+WebBrowser.maybeCompleteAuthSession();
+
+// Define a user type
+type GoogleUser = {
+  id: string;
+  email: string;
+  name: string;
+  givenName?: string;
+  familyName?: string;
+  photo?: string;
+};
+
+// Context type
+type AuthContextType = {
+  signIn: () => Promise<GoogleUser | null>;
   signOut: () => void;
   session?: string | null;
   isLoading: boolean;
-}>({
-  signIn: () => null,
-  signOut: () => null,
+};
+
+const AuthContext = createContext<AuthContextType>({
+  signIn: async () => null,
+  signOut: () => {},
   session: null,
   isLoading: false,
 });
 
 export function useSession() {
   const value = useContext(AuthContext);
-  if (process.env.NODE_ENV !== 'production') {
-    if (!value) {
-      throw new Error('useSession must be wrapped in a <SessionProvider />');
-    }
-  }
-
+  if (!value) throw new Error("useSession must be wrapped in a <SessionProvider />");
   return value;
 }
 
 export function SessionProvider({ children }: PropsWithChildren) {
-  const [[isLoading, session], setSession] = useStorageState('session');
+  const [[isLoading, session], setSession] = useStorageState("session");
 
-  useEffect(() => {
-    GoogleSignin.configure();
-  }, []);
+  // Google OAuth discovery and request configuration
+  const discovery = AuthSession.useAutoDiscovery("https://accounts.google.com");
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!,
+      redirectUri: AuthSession.makeRedirectUri({
+        scheme: "your-app-scheme",
+      }),
+      scopes: ["openid", "profile", "email"],
+    },
+    discovery
+  );
+
+  // Sign in function
+  const signIn = async (): Promise<GoogleUser | null> => {
+    try {
+      const result = await promptAsync();
+
+      if (result.type === "success" && result.authentication?.accessToken) {
+        const userInfoResponse = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+          headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
+        });
+
+        const userInfo = await userInfoResponse.json();
+
+        const user: GoogleUser = {
+          id: userInfo.id,
+          email: userInfo.email,
+          name: userInfo.name,
+          givenName: userInfo.given_name,
+          familyName: userInfo.family_name,
+          photo: userInfo.picture,
+        };
+
+        // Optionally store user session
+        setSession(userInfo.email);
+
+        return user;
+      }
+
+      return null;
+    } catch (err) {
+      console.error("Error signing in:", err);
+      return null;
+    }
+  };
+
+  const signOut = async () => {
+    setSession(null);
+  };
 
   return (
-    <AuthContext.Provider
-      value={{
-        signIn: async () => {
-          // Call the google sign in method
-          const user = await googleSignIn();
-          if (!user) throw new Error('User not found');
-
-          // Check if the db has the user
-          const dbUser = await getUserByGoogleId(user.id);
-
-          if (dbUser) {
-            // Set the session to be the userID
-            setSession(dbUser.id);
-          } else {
-            // Create the user
-            const newUser = await createUser({
-              g_id: user.id,
-              username: user.name || user.givenName + ' ' + user.familyName,
-              email: user.email,
-              profile_pic: user.photo,
-            });
-            setSession(newUser.toString());
-          }
-        },
-        signOut: async () => {
-          try {
-            await GoogleSignin.revokeAccess();
-            await GoogleSignin.signOut();
-            setSession(null);
-          } catch (error) {
-            console.error('An error occurred while signing out', error);
-          }
-        },
-        session,
-        isLoading,
-      }}>
+    <AuthContext.Provider value={{ signIn, signOut, session, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-const googleSignIn = async () => {
-  try {
-    await GoogleSignin.hasPlayServices();
-    const response = await GoogleSignin.signIn();
-
-    if (isSuccessResponse(response)) {
-      return response.data.user;
-    } else {
-      console.error('Sign in was cancelled');
-    }
-  } catch (error) {
-    if (isErrorWithCode(error)) {
-      switch (error.code) {
-        case statusCodes.IN_PROGRESS:
-          console.error("Sign-in already in progress");
-          break;
-        case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-          console.error(
-            "Play services are not available. Please install Play services from the Play Store."
-          );
-          break;
-        default:
-          console.error("An error occurred while signing in");
-          break;
-      }
-    } else {
-      console.error("An error occurred while signing in");
-    }
-  }
 }
