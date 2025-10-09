@@ -6,25 +6,21 @@ export const createUser = async (user: User) => {
 
     const db = await SQLite.openDatabaseAsync('flexzone_database');
 
-    const exists = await getUserByGoogleId(user.g_id);
-    if (exists) {
-        console.log('User already exists:', exists)
-        return exists;
-    }
+    await db.runAsync(
+        "INSERT INTO user (g_id, username, email, profile_pic) VALUES (?, ?, ?, ?)",
+        [user.g_id, user.username, user.email, user.profile_pic]
+      );
 
-    const response = await db.runAsync('INSERT INTO user (g_id, username, email, profile_pic) VALUES (?, ?, ?, ?)', [
-        user.g_id, user.username, user.email, user.profile_pic
-    ])
-
-    return response.lastInsertRowId;
+      const newUser = await db.getFirstAsync<User>("SELECT * FROM user WHERE g_id = ?", [user.g_id]);
+      return newUser!;
 }
 
-export const getUserByGoogleId = async (g_id: string) => {
-    console.log('Getting user by google id:', g_id)
+export const getUserByGoogleId = async (googleId: string): Promise<User | null> => {
+    console.log('Getting user by google id:', googleId)
     const db = await SQLite.openDatabaseAsync('flexzone_database');
 
-    const user = await db.getFirstAsync('SELECT * FROM user WHERE g_id = ?', [g_id]);
-    console.log('User: ', user)
+    const result = await db.getFirstAsync<User>("SELECT * FROM user WHERE g_id = ?", [googleId]);
+    console.log('User: ', result)
 
-    return user;
+    return result ?? null;
 }

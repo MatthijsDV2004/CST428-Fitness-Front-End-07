@@ -1,24 +1,38 @@
 {
   "expo": {
-    "name": "CST428-Fitness-Front-End-01",
-    "slug": "CST428-Fitness-Front-End-01",
+    "name": "Fitness",
+    "slug": "fitness-app",
+    "scheme": "fitness-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "cst428fitnessfrontend07",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
-      
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "fitness-app"
+            }
+          ]
+        }
+      ],
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.mattdv2004.fitnessapp"
     },
     "web": {
       "output": "static",
@@ -42,6 +56,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9b5dbb8a-484a-4399-aa4b-278b9d18b3bb"
+      }
     }
   }
 }

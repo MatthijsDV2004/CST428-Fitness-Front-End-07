@@ -1,8 +1,10 @@
 import { SQLiteDatabase } from "expo-sqlite";
+import * as AuthSession from "expo-auth-session";
 
 export const initDB = async (db: SQLiteDatabase) => {
     console.log('Database Initializing');
-
+    console.log(AuthSession.makeRedirectUri());
+    
     try {
         await db.execAsync(`
             CREATE TABLE IF NOT EXISTS user (
@@ -35,7 +37,7 @@ export const initDB = async (db: SQLiteDatabase) => {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
                 name TEXT NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(id)
+                FOREIGN KEY(user_id) REFERENCES user(id)
             );
 
             CREATE TABLE IF NOT EXISTS workout_plan_exercises (

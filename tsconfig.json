@@ -3,7 +3,11 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "strict": true,
-    "types": ["jest", "react", "react-native"],
+    "types": [
+      "jest",
+      "react",
+      "react-native"
+    ],
     "paths": {
       "@/*": [
         "./*"
@@ -12,8 +16,6 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "**/*.tsx"
   ]
 }
