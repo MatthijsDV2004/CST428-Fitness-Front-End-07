@@ -4,18 +4,63 @@ export default {
   expo: {
     name: "Fitness",
     slug: "fitness-app",
-    scheme: "fitness-app", // fine to keep; not used by this lib
-    android: { package: "com.mattdv2004.fitnessapp" },
-    ios: { bundleIdentifier: "com.mattdv2004.fitnessapp" },
+    scheme: "fitness-app",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/icon.png",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.mattdv2004.fitnessapp",
+    },
+    android: {
+      package: "com.mattdv2004.fitnessapp",
+      adaptiveIcon: {
+        foregroundImage: "./assets/images/adaptive-icon.png",
+        backgroundColor: "#ffffff",
+      },
+      intentFilters: [
+        {
+          action: "VIEW",
+          category: ["BROWSABLE", "DEFAULT"],
+          data: [{ scheme: "fitness-app" }],
+        },
+      ],
+      edgeToEdgeEnabled: true,
+      predictiveBackGestureEnabled: false,
+    },
+    web: {
+      output: "static",
+      favicon: "./assets/images/favicon.png",
+    },
     plugins: [
-      // The library’s config plugin wires native bits on iOS/Android
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/splash-icon.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+          dark: {
+            backgroundColor: "#000000",
+          },
+        },
+      ],
       "@react-native-google-signin/google-signin",
     ],
+    experiments: {
+      typedRoutes: true,
+      reactCompiler: true,
+    },
     extra: {
+      eas: {
+        projectId: "9b5dbb8a-484a-4399-aa4b-278b9d18b3bb",
+      },
       expoPublic: {
-        GOOGLE_ANDROID_CLIENT_ID: process.env.GOOGLE_ANDROID_CLIENT_ID, // Android OAuth client
-        // GOOGLE_IOS_CLIENT_ID: process.env.GOOGLE_IOS_CLIENT_ID,         // iOS OAuth client
-        GOOGLE_WEB_CLIENT_ID: process.env.GOOGLE_WEB_CLIENT_ID,         // Web OAuth client
+        GOOGLE_ANDROID_CLIENT_ID: process.env.GOOGLE_ANDROID_CLIENT_ID,
+        GOOGLE_WEB_CLIENT_ID: process.env.GOOGLE_WEB_CLIENT_ID,
       },
     },
   },
