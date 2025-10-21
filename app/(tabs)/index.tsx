@@ -10,13 +10,13 @@ import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
 import { HelloWave } from "@/components/HelloWave";
 import { useSession } from "@/hooks/ctx";
-import { GoogleUser } from "@/types/user";
+import { GoogleUser } from "@/types/types";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
-import { RootStackParamList } from "@/types/navigation";
+import { RootStackParamList } from "@/types/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import useProfile from "@/hooks/useProfile";
 import { ProfilePic } from "@/components/ProfilePic";
-
+import * as SQLite from "expo-sqlite";
 // Default profile picture (Replace later with Google Profile)
 const DEFAULT_PROFILE_PIC = require("@/assets/images/default-profile.png");
 
@@ -35,7 +35,29 @@ export default function HomeScreen() {
   const { profile } = useProfile();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [workoutData, setWorkoutData] = useState(workoutSplit);
+  useEffect(() => {
+    const checkDB = async () => {
+      const db = await SQLite.openDatabaseAsync("flexzone_database.db");
 
+  const tables = await db.getAllAsync(
+    "SELECT name FROM sqlite_master WHERE type='table';"
+  );
+  console.log("📋 Tables:", tables);
+
+  const users = await db.getAllAsync("SELECT * FROM user;");
+  console.log("👤 Users:", users);
+
+  const profiles = await db.getAllAsync("SELECT * FROM profile;");
+  console.log("🧍 Profiles:", profiles);
+
+  const workouts = await db.getAllAsync("SELECT * FROM workoutPlan;");
+  console.log("🏋️ Workout Plans:", workouts);
+
+  const exercises = await db.getAllAsync("SELECT * FROM exercise;");
+  console.log("💪 Exercises:", exercises);
+    };
+    checkDB();
+  }, []);
   useEffect(() => {
     const loadWorkoutData = async () => {
       try {
@@ -77,13 +99,14 @@ export default function HomeScreen() {
           <HelloWave />
         </View>
         <View style={styles.headerRight}>
-          <ProfilePic />
+          <ProfilePic uri={profile?.user?.profile_pic ?? null} />
         </View>
       </View>
 
       {/* Subheader Section */}
       <View style={styles.subHeader}>
         <ThemedText type="subtitle">Your Current Split</ThemedText>
+        
         <View style={styles.subHeaderDate}>
           <ThemedText type="default">{formattedDate}</ThemedText>
         </View>

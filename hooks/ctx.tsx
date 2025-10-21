@@ -1,7 +1,29 @@
-import { useContext, createContext, type PropsWithChildren, useEffect, useCallback } from "react";
-import { GoogleSignin, statusCodes, isSuccessResponse, isErrorWithCode } from "@react-native-google-signin/google-signin";import { Platform } from "react-native";
+import {
+  useContext,
+  createContext,
+  type PropsWithChildren,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
+import {
+  GoogleSignin,
+  statusCodes,
+  isSuccessResponse,
+} from "@react-native-google-signin/google-signin";
+import { Platform } from "react-native";
 import { useStorageState } from "./useStorageState";
 import { createUser, getUserByGoogleId } from "@/db/user";
+
+// 👇 Store backend JWT securely
+import * as SecureStore from "expo-secure-store";
+
+const API_BASE_URL =
+  __DEV__
+    ? Platform.OS === "android"
+      ? "http://10.0.2.2:8080"
+      : "http://localhost:8080"
+    : "https://cst438-d5640ff12bdc.herokuapp.com";
 
 type User = {
   g_id: string;
@@ -35,7 +57,8 @@ const AuthContext = createContext<AuthContextType>({
 
 export function useSession() {
   const value = useContext(AuthContext);
-  if (!value) throw new Error("useSession must be wrapped in a <SessionProvider />");
+  if (!value)
+    throw new Error("useSession must be wrapped in a <SessionProvider />");
   return value;
 }
 
@@ -48,37 +71,63 @@ const mapGoogleToUser = (g: GoogleUser): User => ({
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const [[isLoading, session], setSession] = useStorageState("session");
+  const isSigningInRef = useRef(false); // prevent concurrent sign-ins
 
-  // Configure once
+  // ✅ Configure Google Sign-In once
   useEffect(() => {
     GoogleSignin.configure({
-      // Web client is necessary if you want tokens/refresh tokens and server verification
       webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      // Optional but good to set explicitly:
-      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-      // On Android, the native SDK identifies by package + keystore (no explicit androidClientId param here)
-      offlineAccess: true,               // to get serverAuthCode/refresh token
-      forceCodeForRefreshToken: false,   // set true if you want code flow
+      offlineAccess: true,
+      forceCodeForRefreshToken: false,
       profileImageSize: 128,
     });
   }, []);
 
   const signIn = useCallback(async (): Promise<User | null> => {
+    if (isSigningInRef.current) {
+      console.warn("Sign-in already in progress, ignoring duplicate call");
+      return null;
+    }
+
+    isSigningInRef.current = true;
+
     try {
-      // Google Play Services check (Android)
       if (Platform.OS === "android") {
-        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        await GoogleSignin.hasPlayServices({
+          showPlayServicesUpdateDialog: true,
+        });
       }
 
       const res = await GoogleSignin.signIn(); // opens native Google UI
-      if (!isSuccessResponse(res)) {
-        // user cancelled or no saved credential
+      if (!isSuccessResponse(res)) return null;
+
+      const { user, idToken } = res.data;
+
+      if (!idToken) {
+        console.error("❌ No ID token returned from Google");
         return null;
       }
-      // result contains: user, idToken, serverAuthCode (if enabled)
-      // You can also fetch accessToken if you set webClientId:
-      // const { accessToken } = await GoogleSignin.getTokens();
-      const { user, idToken, serverAuthCode } = res.data;
+
+      // 👇 Send the ID token to your backend for verification
+      const verifyRes = await fetch(`${API_BASE_URL}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: idToken }),
+      });
+
+      if (!verifyRes.ok) {
+        const msg = await verifyRes.text();
+        console.error("❌ Backend verification failed:", msg);
+        return null;
+      }
+
+      const verifyData = await verifyRes.json();
+      const backendJWT = verifyData.access_token;
+      console.log("🎟️ Backend JWT:", backendJWT);
+
+      // ✅ Save your backend JWT securely
+      await SecureStore.setItemAsync("jwt", backendJWT);
+
       const gUser: GoogleUser = {
         id: user.id ?? "",
         email: user.email ?? "",
@@ -93,35 +142,35 @@ export function SessionProvider({ children }: PropsWithChildren) {
         return null;
       }
 
-      // Upsert in your DB
+      // ✅ Upsert user in your local DB
       let dbUser = await getUserByGoogleId(gUser.id);
       if (!dbUser) dbUser = await createUser(mapGoogleToUser(gUser));
 
+      // ✅ Store email in session for UI display
       setSession(gUser.email);
+
       return dbUser;
     } catch (e: any) {
       if (e.code === statusCodes.SIGN_IN_CANCELLED) {
-        // user cancelled
-        return null;
-      }
-      if (e.code === statusCodes.IN_PROGRESS) {
-        // already running
-        return null;
-      }
-      if (e.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        console.log("User cancelled Google Sign-In");
+      } else if (e.code === statusCodes.IN_PROGRESS) {
+        console.log("Google Sign-In already in progress");
+      } else if (e.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         console.error("Play Services not available:", e);
-        return null;
+      } else {
+        console.error("Google Sign-In error:", e);
       }
-      console.error("Google sign-in error:", e);
       return null;
+    } finally {
+      isSigningInRef.current = false;
     }
   }, [setSession]);
 
   const signOut = useCallback(async () => {
     try {
-      // revoke refresh token + sign out locally
       await GoogleSignin.revokeAccess();
       await GoogleSignin.signOut();
+      await SecureStore.deleteItemAsync("jwt");
     } finally {
       setSession(null);
     }

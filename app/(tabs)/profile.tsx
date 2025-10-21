@@ -13,7 +13,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ProfilePic style={styles.profilePic} />
+      <ProfilePic uri={profile?.user?.profile_pic ?? null} />
 
       <ThemedText type="title" style={styles.username}>
         {profile?.user?.username}

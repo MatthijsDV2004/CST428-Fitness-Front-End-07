@@ -9,69 +9,83 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSession } from '@/hooks/ctx';
 import { getProfile } from '@/db/profile';
 import { ProfilePic } from '@/components/ProfilePic';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import useProfile from '@/hooks/useProfile';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { session, isLoading } = useSession();
-
-  if (isLoading) {
-    return null;
-  }
-
-  // Only require authentication within the (tabs) group's layout as users
-  // need to be able to access the (auth) group and sign in again.
-  if (!session) {
-    // On web, static rendering will stop here as the user is not authenticated
-    // in the headless Node process that the pages are rendered in.
-    return <Redirect href="/auth" />;
-  }
-
+  const { profile } = useProfile();
+  // 1️⃣ configure Google Sign-In once
   useEffect(() => {
-    getProfile(session).then((res) => {
-      if (res && session) {
-        router.push('/(tabs)')
-      } else {
-        router.push('/onboarding')
-      }
-    }).catch(err => {
-      console.error(err)
-    })
-  }, [])
+    if (__DEV__) {
+      (GoogleSignin as any).setLogLevel?.("verbose");
+      console.log("✅ Google Sign-In verbose logging enabled");
+    }
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      offlineAccess: true,
+      forceCodeForRefreshToken: false,
+      profileImageSize: 128,
+    });
+  }, []);
 
+  // 2️⃣ declare every other hook *before* any return
+  useEffect(() => {
+    if (!session) return; // safe to guard inside the hook
+    const loadProfile = async () => {
+      try {
+        const res = await getProfile(session);
+        if (res && session) router.push("/(tabs)");
+        else router.push("/onboarding");
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadProfile();
+  }, [session]);
+
+  // 3️⃣ only conditional rendering after hooks
+  if (isLoading) return null;
+  if (!session) return <Redirect href="/auth" />;
+
+  // 4️⃣ main UI
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
+          ios: { position: "absolute" },
           default: {},
         }),
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="house.fill" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Explore",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="paperplane.fill" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <ProfilePic tab/>,
+          title: "Profile",
+          tabBarIcon: () => <ProfilePic uri={profile?.user?.profile_pic ?? null} />,
         }}
       />
     </Tabs>

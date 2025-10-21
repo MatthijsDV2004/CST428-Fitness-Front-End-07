@@ -1,16 +1,16 @@
-import { SQLiteDatabase } from "expo-sqlite";
+import * as SQLite from "expo-sqlite";
 import * as AuthSession from "expo-auth-session";
 
-export const initDB = async (db: SQLiteDatabase) => {
+export async function initDB() {
     console.log('Database Initializing');
     console.log(AuthSession.makeRedirectUri());
-    
+    const db = await SQLite.openDatabaseAsync("flexzone_database.db");
     try {
         await db.execAsync(`
             CREATE TABLE IF NOT EXISTS user (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 g_id TEXT UNIQUE,
-                username TEXT UNIQUE,
+                username TEXT,
                 email TEXT UNIQUE,
                 profile_pic TEXT 
             );
@@ -33,14 +33,14 @@ export const initDB = async (db: SQLiteDatabase) => {
                 api_id TEXT UNIQUE
             );
 
-            CREATE TABLE IF NOT EXISTS workout_plan (
+            CREATE TABLE IF NOT EXISTS workoutPlan (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
                 name TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES user(id)
             );
 
-            CREATE TABLE IF NOT EXISTS workout_plan_exercises (
+            CREATE TABLE IF NOT EXISTS workoutPlanExercises (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 workout_plan_id INTEGER,
                 exercise_id INTEGER,
@@ -51,6 +51,7 @@ export const initDB = async (db: SQLiteDatabase) => {
                 FOREIGN KEY(exercise_id) REFERENCES exercise(id)
             );
         `);
+        console.log('Database Initialized Successfully');
     } catch (e) {
         console.error("Database Error: ", e);
     }
