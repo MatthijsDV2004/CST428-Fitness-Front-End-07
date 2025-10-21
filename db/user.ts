@@ -1,26 +1,30 @@
 import * as SQLite from "expo-sqlite";
-import type { User } from "@/types/user";
+import type { User } from "@/types/types";
 
-export const createUser = async (user: User) => {
-    console.log('Creating user:', user)
 
-    const db = await SQLite.openDatabaseAsync('flexzone_database');
-
+export async function getUserByGoogleId(g_id: string): Promise<User | null> {
+    const db = await SQLite.openDatabaseAsync("flexzone_database.db");
+    const user = await db.getFirstAsync<User>(
+      "SELECT * FROM user WHERE g_id = ?",
+      [g_id]
+    );
+    return user ?? null;
+  }
+  
+  export async function createUser(newUser: User): Promise<User> {
+    const db = await SQLite.openDatabaseAsync("flexzone_database.db");
     await db.runAsync(
-        "INSERT INTO user (g_id, username, email, profile_pic) VALUES (?, ?, ?, ?)",
-        [user.g_id, user.username, user.email, user.profile_pic]
-      );
-
-      const newUser = await db.getFirstAsync<User>("SELECT * FROM user WHERE g_id = ?", [user.g_id]);
-      return newUser!;
-}
-
-export const getUserByGoogleId = async (googleId: string): Promise<User | null> => {
-    console.log('Getting user by google id:', googleId)
-    const db = await SQLite.openDatabaseAsync('flexzone_database');
-
-    const result = await db.getFirstAsync<User>("SELECT * FROM user WHERE g_id = ?", [googleId]);
-    console.log('User: ', result)
-
-    return result ?? null;
-}
+      `
+      INSERT INTO user (g_id, username, email, profile_pic)
+      VALUES (?, ?, ?, ?);
+      `,
+      [newUser.g_id, newUser.username, newUser.email, newUser.profile_pic ?? null]
+    );
+  
+    const inserted = await db.getFirstAsync<User>(
+      "SELECT * FROM user WHERE g_id = ?",
+      [newUser.g_id]
+    );
+    if (!inserted) throw new Error("Failed to create user in database");
+    return inserted;
+  }

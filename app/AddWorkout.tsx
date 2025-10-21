@@ -5,7 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { RootStackParamList } from '@/types/navigation';
 import { Exercise } from '@/types/exercise';
-import { getExercises } from '@/api/workOutAPI';
+import { getWorkouts } from '@/api/workOutAPI';
 import { addExerciseToWorkoutPlan } from '@/db/workoutPlan';
 
 export default function AddWorkoutScreen() {
@@ -62,7 +62,8 @@ export default function AddWorkoutScreen() {
     const fetchExercises = async () => {
       setLoading(true);
       try {
-        const exercises = await getExercises({ name: searchTerm });
+        const exercises = await getWorkouts({ name: searchTerm });
+        console.log("Fetched exercises:", exercises);
         setExercises(exercises);
       } catch (error) {
         console.error('Error fetching exercises:', error);
@@ -103,16 +104,22 @@ export default function AddWorkoutScreen() {
 
       {/* Shows results from API search */}
       <FlatList
-        data={exercises}
-        keyExtractor={(item) => item.name.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => setSelectedExercise(item.name)}>
-            <ThemedView style={styles.exerciseCard}>
-              <ThemedText style={styles.exerciseTitle}>{item.name}</ThemedText>
-            </ThemedView>
-          </TouchableOpacity>
-        )}
-      />
+  data={exercises ?? []}
+  keyExtractor={(item) => item.workoutID?.toString() ?? Math.random().toString()}
+  renderItem={({ item }) => (
+    <TouchableOpacity onPress={() => setSelectedExercise(item.workoutName)}>
+      <ThemedView style={styles.exerciseCard}>
+        <ThemedText style={styles.exerciseTitle}>
+          {item.workoutName}
+        </ThemedText>
+        <ThemedText>{item.muscleGroup}</ThemedText>
+        <ThemedText style={{ fontStyle: "italic" }}>
+          {item.workoutDesc}
+        </ThemedText>
+      </ThemedView>
+    </TouchableOpacity>
+  )}
+/>
 
       <ThemedText style={styles.placeholder}>{selectedExercise}</ThemedText>
       <ThemedText style={styles.placeholder3}>Enter Sets and Reps Below</ThemedText>

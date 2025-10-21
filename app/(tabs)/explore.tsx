@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { getExercises } from '../../api/workOutAPI';
+import { getWorkouts } from '../../api/workOutAPI';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Exercise } from '@/types/exercise';
+import { Exercise } from '@/types/types';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '@/types/navigation';
+import { RootStackParamList } from '@/types/types';
 
 export default function ExploreScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -15,9 +15,9 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const muscles = [
     { label: "Abs", value: "abdominals" },
-    { label: "Abductors", value: "abductors" },
-    { label: "Adductors", value: "adductors" },
-    { label: "Biceps", value: "biceps" },
+    { label: "Arms", value: "arms" },
+    // { label: "Adductors", value: "adductors" },
+    { label: "Core", value: "core" },
     { label: "Calves", value: "calves" },
     { label: "Chest", value: "chest" },
     { label: "Forearms", value: "forearms" },
@@ -40,7 +40,7 @@ export default function ExploreScreen() {
     const fetchExercises = async () => {
       setLoading(true);
       try {
-        const exercises = await getExercises({ muscle: selectedMuscle });
+        const exercises = await getWorkouts({ muscle: selectedMuscle });
         setExercises(exercises);
       } catch (error) {
         console.error('Error fetching exercises:', error);
@@ -78,20 +78,21 @@ export default function ExploreScreen() {
 
       </Picker>}
       <FlatList
-        data={exercises}
-        keyExtractor={(item) => item.name.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ExerciseDetail', { exercise: item })}
-          >
-            <ThemedView style={styles.exerciseCard}>
-              <ThemedText style={styles.exerciseTitle}>
-                {item.name}
-              </ThemedText>
-            </ThemedView>
-          </TouchableOpacity>
-        )}
-      />
+  data={exercises}
+  keyExtractor={(item) => item.workoutID.toString()}
+  renderItem={({ item }) => (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('ExerciseDetail', { exercise: item })}
+    >
+      <ThemedView style={styles.exerciseCard}>
+        <ThemedText style={styles.exerciseTitle}>
+          {item.workoutName}
+        </ThemedText>
+        <ThemedText>{item.muscleGroup}</ThemedText>
+      </ThemedView>
+    </TouchableOpacity>
+  )}
+/>
     </ThemedView>
   );
 }

@@ -1,27 +1,24 @@
-import useProfile from "@/hooks/useProfile"
-import { Image, ImageStyle } from "react-native";
-const DEFAULT_PROFILE_PIC = require("@/assets/images/default-profile.png");
+import React from "react";
+import { Image, StyleSheet } from "react-native";
 
-export const ProfilePic = (tab: boolean) => {
-    const { profile } = useProfile()
+// ✅ Define props properly
+type ProfilePicProps = {
+  size?: number;
+  uri?: string | null;
+};
 
-    return (
-        <Image source={
-            profile?.user?.profile_pic ||
-            DEFAULT_PROFILE_PIC
-        }
-        style={tab ? $profilePic : {
-            width: 10,
-            height: 10
-        }}
-        />
-    )
+// ✅ Export a valid functional React component
+export function ProfilePic({ size = 50, uri }: ProfilePicProps) {
+  const source =
+    uri && uri.length > 0
+      ? { uri }
+      : require("@/assets/images/default-profile.png");
+
+  return <Image source={source} style={[styles.image, { width: size, height: size }]} />;
 }
 
-const $profilePic: ImageStyle = {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "#ccc",
-}
+const styles = StyleSheet.create({
+  image: {
+    borderRadius: 9999,
+  },
+});
