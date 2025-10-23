@@ -16,19 +16,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { session, isLoading } = useSession();
   const { profile } = useProfile();
-  // 1️⃣ configure Google Sign-In once
-  useEffect(() => {
-    if (__DEV__) {
-      (GoogleSignin as any).setLogLevel?.("verbose");
-      console.log("✅ Google Sign-In verbose logging enabled");
-    }
-    GoogleSignin.configure({
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      offlineAccess: true,
-      forceCodeForRefreshToken: false,
-      profileImageSize: 128,
-    });
-  }, []);
+  
 
   // 2️⃣ declare every other hook *before* any return
   useEffect(() => {

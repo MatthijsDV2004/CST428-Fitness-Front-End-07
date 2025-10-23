@@ -5,7 +5,7 @@ let db: SQLite.SQLiteDatabase | null = null;
 //Function to initialize and get the database
 const getDatabase = async () => {
     if (!db) {
-        db = await SQLite.openDatabaseAsync("flexzone_database");
+        db = await SQLite.openDatabaseAsync("flexzone_database.db");
         console.log(" Database initialized!");
     }
     return db;

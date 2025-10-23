@@ -18,7 +18,6 @@ import useProfile from "@/hooks/useProfile";
 import { ProfilePic } from "@/components/ProfilePic";
 import * as SQLite from "expo-sqlite";
 // Default profile picture (Replace later with Google Profile)
-const DEFAULT_PROFILE_PIC = require("@/assets/images/default-profile.png");
 
 // Static Workout Split Data (Replace later with API data)
 const workoutSplit = [

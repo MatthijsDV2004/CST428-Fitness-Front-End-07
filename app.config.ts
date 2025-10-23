@@ -36,6 +36,7 @@ export default {
     },
     plugins: [
       "expo-router",
+      "expo-video",
       [
         "expo-splash-screen",
         {
@@ -59,8 +60,8 @@ export default {
         projectId: "9b5dbb8a-484a-4399-aa4b-278b9d18b3bb",
       },
       expoPublic: {
-        GOOGLE_ANDROID_CLIENT_ID: process.env.GOOGLE_ANDROID_CLIENT_ID,
-        GOOGLE_WEB_CLIENT_ID: process.env.GOOGLE_WEB_CLIENT_ID,
+        EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+        EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
       },
     },
   },
