@@ -80,3 +80,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+base.apk
+build-1761205168904.apk
+Dockerfile

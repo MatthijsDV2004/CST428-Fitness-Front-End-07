@@ -6,8 +6,7 @@ const LOCAL_IP = "10.11.116.234";
 const LOCAL_URL = `http://${LOCAL_IP}:8080`;
 const PROD_URL = "https://cst438-d5640ff12bdc.herokuapp.com";
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? LOCAL_URL : PROD_URL);
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || PROD_URL;
 
 console.log("🔗 Fetching workouts from:", `${API_BASE_URL}/getWorkouts`);
 

@@ -18,12 +18,8 @@ import { createUser, getUserByGoogleId } from "@/db/user";
 // 👇 Store backend JWT securely
 import * as SecureStore from "expo-secure-store";
 
-const API_BASE_URL =
-  __DEV__
-    ? Platform.OS === "android"
-      ? "http://10.0.2.2:8080"
-      : "http://localhost:8080"
-    : "https://cst438-d5640ff12bdc.herokuapp.com";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://cst438-d5640ff12bdc.herokuapp.com";
+
 
 type User = {
   g_id: string;
