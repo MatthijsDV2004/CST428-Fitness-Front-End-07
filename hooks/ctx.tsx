@@ -19,7 +19,7 @@ import * as SecureStore from "expo-secure-store";
 import type { User, NewUser, GoogleUser } from "@/types/types";
 
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ??
+  (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ??
   "https://cst438-d5640ff12bdc.herokuapp.com";
 
 type AuthContextType = {
