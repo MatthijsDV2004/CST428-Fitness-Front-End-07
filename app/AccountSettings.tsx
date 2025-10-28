@@ -4,10 +4,10 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { RootStackParamList } from '@/types/navigation'; // Import your navigation types
+import { RootStackParamList } from '@/types/types'; 
 
 export default function AccountSettingsScreen() {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>(); // Use the navigation types
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>(); 
 
   return (
     <ThemedView style={styles.container}>

@@ -1,97 +1,153 @@
 import React, { useState, useEffect } from "react";
-import { View, TextInput, TouchableOpacity, FlatList, StyleSheet } from "react-native";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+} from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
-import { RootStackParamList } from "@/types/navigation";
-import { fetchWorkoutExercises, updateWorkoutExerciseByName, deleteExerciseFromWorkoutPlanByName } from "@/db/workoutPlan";
+import { RootStackParamList } from "@/types/types";
+import {
+  getPlansByDay,
+  updateExerciseInPlan,
+  deleteExerciseFromPlan,
+} from "@/api/plan";
+import * as SecureStore from "expo-secure-store";
 
 export default function EditWorkoutScreen() {
-  const route = useRoute<RouteProp<RootStackParamList, "editWorkout">>();
+  const route = useRoute<RouteProp<RootStackParamList, "EditWorkout">>();
   const navigation = useNavigation();
   const { day } = route.params;
 
-  const [workoutExercises, setWorkoutExercises] = useState<{ name: string; sets: number; reps: number }[]>([]);
+  const [workoutExercises, setWorkoutExercises] = useState<
+    { name: string; sets: number; reps: number }[]
+  >([]);
+  const [planId, setPlanId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Load exercises from the database when the screen loads
+  // Load exercises for this day from backend
   useEffect(() => {
-    const loadExercises = async () => {
+    const loadPlanData = async () => {
       try {
-        const exercises = await fetchWorkoutExercises(day);
-        setWorkoutExercises(exercises);
+        const googleId = await SecureStore.getItemAsync("googleId");
+        if (!googleId) {
+          console.error("No Google ID found");
+          return;
+        }
+
+        const plans = await getPlansByDay(googleId, day);
+        if (plans.length > 0) {
+          const plan = plans[0];
+          setPlanId(plan.id);
+          setWorkoutExercises(plan.exercises || []); 
+          console.log("Loaded plan for editing:", plan);
+        } else {
+          console.warn("No plan found for this day");
+          setWorkoutExercises([]);
+        }
       } catch (error) {
-        console.error("Failed to fetch workout exercises:", error);
+        console.error("Failed to load plan data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadExercises();
-  }, []);
+    loadPlanData();
+  }, [day]);
 
-  // Update sets and reps in the database using exercise name
   const handleUpdateExercise = async (name: string, sets: number, reps: number) => {
-    const success = await updateWorkoutExerciseByName(name, sets, reps);
-    if (success) {
-      setWorkoutExercises((prevExercises) =>
-        prevExercises.map((exercise) =>
-          exercise.name === name ? { ...exercise, sets, reps } : exercise
-        )
+    if (!planId) return;
+    try {
+      await updateExerciseInPlan(planId, name, { sets, reps });
+      console.log("Updated exercise:", name);
+      setWorkoutExercises((prev) =>
+        prev.map((ex) => (ex.name === name ? { ...ex, sets, reps } : ex))
       );
+    } catch (err) {
+      console.error("Error updating exercise:", err);
     }
   };
 
-  // Delete an exercise from the workout plan using exercise name
+  // Delete an exercise from the plan
   const handleDeleteExercise = async (name: string) => {
-    const success = await deleteExerciseFromWorkoutPlanByName(name);
-    if (success) {
-      setWorkoutExercises((prevExercises) => prevExercises.filter((exercise) => exercise.name !== name));
+    if (!planId) return;
+    try {
+      await deleteExerciseFromPlan(planId, name);
+      console.log("Deleted exercise:", name);
+      setWorkoutExercises((prev) =>
+        prev.filter((exercise) => exercise.name !== name)
+      );
+    } catch (err) {
+      console.error("Error deleting exercise:", err);
     }
   };
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText>Loading plan...</ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
         <ThemedText style={styles.backArrow}>←</ThemedText>
       </TouchableOpacity>
 
-      {/* Title */}
       <View style={styles.titleContainer}>
         <ThemedText type="title">Edit Workout - </ThemedText>
         <ThemedText style={styles.weekday}>{day}</ThemedText>
       </View>
 
-      {/* List of Exercises with Editable Sets/Reps */}
-      <FlatList
-        data={workoutExercises}
-        keyExtractor={(item) => item.name}
-        renderItem={({ item }) => (
-          <View style={styles.exerciseContainer}>
-            <ThemedText style={styles.exerciseName}>{item.name}</ThemedText>
+      {workoutExercises.length > 0 ? (
+        <FlatList
+          data={workoutExercises}
+          keyExtractor={(item) => item.name}
+          renderItem={({ item }) => (
+            <View style={styles.exerciseContainer}>
+              <ThemedText style={styles.exerciseName}>{item.name}</ThemedText>
 
-            {/* Editable Sets Input */}
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={item.sets.toString()}
-              onChangeText={(text) => handleUpdateExercise(item.name, parseInt(text) || 0, item.reps)}
-            />
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={item.sets.toString()}
+                onChangeText={(text) =>
+                  handleUpdateExercise(item.name, parseInt(text) || 0, item.reps)
+                }
+              />
 
-            {/* Editable Reps Input */}
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={item.reps.toString()}
-              onChangeText={(text) => handleUpdateExercise(item.name, item.sets, parseInt(text) || 0)}
-            />
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={item.reps.toString()}
+                onChangeText={(text) =>
+                  handleUpdateExercise(item.name, item.sets, parseInt(text) || 0)
+                }
+              />
 
-            {/* Delete Button */}
-            <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteExercise(item.name)}>
-              <ThemedText style={styles.deleteText}>🗑️</ThemedText>
-            </TouchableOpacity>
-          </View>
-        )}
-        contentContainerStyle={styles.workoutList}
-      />
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteExercise(item.name)}
+              >
+                <ThemedText style={styles.deleteText}>🗑️</ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
+          contentContainerStyle={styles.workoutList}
+        />
+      ) : (
+        <ThemedText style={styles.emptyText}>
+          No exercises in this plan yet.
+        </ThemedText>
+      )}
     </ThemedView>
   );
 }
@@ -115,12 +171,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 1,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 40,
-    textAlign: "center",
-  },
   exerciseContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -136,9 +186,9 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   weekday: {
-    fontSize: 24, 
+    fontSize: 24,
     fontStyle: "italic",
-    color: "#888", 
+    color: "#888",
   },
   input: {
     width: 50,
@@ -159,5 +209,10 @@ const styles = StyleSheet.create({
   workoutList: {
     marginBottom: 30,
     marginTop: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: "#888",
+    fontStyle: "italic",
   },
 });

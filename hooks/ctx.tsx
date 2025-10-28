@@ -13,29 +13,14 @@ import {
 } from "@react-native-google-signin/google-signin";
 import { Platform } from "react-native";
 import { useStorageState } from "./useStorageState";
-import { createUser, getUserByGoogleId } from "@/db/user";
-
-// 👇 Store backend JWT securely
+import { useRepos } from "@/db/index";
 import * as SecureStore from "expo-secure-store";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://cst438-d5640ff12bdc.herokuapp.com";
+import type { User, NewUser, GoogleUser } from "@/types/types";
 
-
-type User = {
-  g_id: string;
-  username: string;
-  email: string;
-  profile_pic: string | null;
-};
-
-type GoogleUser = {
-  id: string;
-  email: string;
-  name: string;
-  givenName?: string;
-  familyName?: string;
-  photo?: string;
-};
+const API_BASE_URL =
+  (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ??
+  "https://cst438-d5640ff12bdc.herokuapp.com";
 
 type AuthContextType = {
   signIn: () => Promise<User | null>;
@@ -58,7 +43,7 @@ export function useSession() {
   return value;
 }
 
-const mapGoogleToUser = (g: GoogleUser): User => ({
+const mapGoogleToUser = (g: GoogleUser): NewUser => ({
   g_id: g.id,
   username: g.name,
   email: g.email,
@@ -67,9 +52,9 @@ const mapGoogleToUser = (g: GoogleUser): User => ({
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const [[isLoading, session], setSession] = useStorageState("session");
-  const isSigningInRef = useRef(false); // prevent concurrent sign-ins
+  const isSigningInRef = useRef(false);
+  const { users, db } = useRepos();
 
-  // ✅ Configure Google Sign-In once
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -94,17 +79,16 @@ export function SessionProvider({ children }: PropsWithChildren) {
         });
       }
 
-      const res = await GoogleSignin.signIn(); // opens native Google UI
+      const res = await GoogleSignin.signIn();
       if (!isSuccessResponse(res)) return null;
 
       const { user, idToken } = res.data;
 
       if (!idToken) {
-        console.error("❌ No ID token returned from Google");
+        console.error("No ID token returned from Google");
         return null;
       }
 
-      // 👇 Send the ID token to your backend for verification
       const verifyRes = await fetch(`${API_BASE_URL}/api/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -113,16 +97,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
       if (!verifyRes.ok) {
         const msg = await verifyRes.text();
-        console.error("❌ Backend verification failed:", msg);
+        console.error("Backend verification failed:", msg);
         return null;
       }
-
-      const verifyData = await verifyRes.json();
-      const backendJWT = verifyData.access_token;
-      console.log("🎟️ Backend JWT:", backendJWT);
-
-      // ✅ Save your backend JWT securely
-      await SecureStore.setItemAsync("jwt", backendJWT);
+      //here we log the jwt token
+      await SecureStore.setItemAsync("jwt", idToken);
+      console.log("JWT token:", idToken);
 
       const gUser: GoogleUser = {
         id: user.id ?? "",
@@ -133,18 +113,22 @@ export function SessionProvider({ children }: PropsWithChildren) {
         photo: user.photo ?? undefined,
       };
 
+      await SecureStore.setItemAsync("googleId", gUser.id);
+
       if (!gUser.id || !gUser.email) {
         console.warn("Google user missing id/email");
         return null;
       }
 
-      // ✅ Upsert user in your local DB
-      let dbUser = await getUserByGoogleId(gUser.id);
-      if (!dbUser) dbUser = await createUser(mapGoogleToUser(gUser));
+      
+      let dbUser = await users.getByGoogleId(gUser.id);
+            if (!dbUser) {
+              await db.withTransactionAsync(async () => {
+                dbUser = await users.create(mapGoogleToUser(gUser));
+              });
+            }
 
-      // ✅ Store email in session for UI display
       setSession(gUser.email);
-
       return dbUser;
     } catch (e: any) {
       if (e.code === statusCodes.SIGN_IN_CANCELLED) {

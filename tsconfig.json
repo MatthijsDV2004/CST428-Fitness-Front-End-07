@@ -4,7 +4,8 @@
     "jsx": "react-jsx",
     "strict": true,
     "types": [
-      "jest",
+      "jest", 
+      "@testing-library/jest-native",
       "react",
       "react-native"
     ],
@@ -15,6 +16,7 @@
     }
   },
   "include": [
+    "global.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",

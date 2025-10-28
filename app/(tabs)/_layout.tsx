@@ -7,23 +7,24 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSession } from '@/hooks/ctx';
-import { getProfile } from '@/db/profile';
+import { useRepos } from '@/db/index';
 import { ProfilePic } from '@/components/ProfilePic';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import useProfile from '@/hooks/useProfile';
+import { initDB } from '@/db/init';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { session, isLoading } = useSession();
   const { profile } = useProfile();
-  
+  const { profiles } = useRepos();
 
-  // 2️⃣ declare every other hook *before* any return
   useEffect(() => {
-    if (!session) return; // safe to guard inside the hook
+    
+    if (!session) return; 
     const loadProfile = async () => {
       try {
-        const res = await getProfile(session);
+        const res = await profiles.getUserAndProfileByEmail(session);
         if (res && session) router.push("/(tabs)");
         else router.push("/onboarding");
       } catch (err) {
@@ -33,11 +34,9 @@ export default function TabLayout() {
     loadProfile();
   }, [session]);
 
-  // 3️⃣ only conditional rendering after hooks
   if (isLoading) return null;
   if (!session) return <Redirect href="/auth" />;
 
-  // 4️⃣ main UI
   return (
     <Tabs
       screenOptions={{

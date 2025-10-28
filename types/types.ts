@@ -7,13 +7,25 @@ export interface GoogleUser {
     photo?: string | null | undefined;
   }
   
+
+  export interface GoogleUser {
+    id: string;
+    name: string;
+    givenName?: string;
+    familyName?: string;
+    email: string;
+    photo?: string | null | undefined;
+  }
+  
   export interface User {
+    id: number;
     g_id: string;
     username: string;
     email: string;
     profile_pic: string | null;
   }
   
+  export type NewUser = Omit<User, "id">;
   export interface Profile {
     user_id: number;
     age: number;
@@ -36,14 +48,13 @@ export interface GoogleUser {
     workoutDesc: string;
     videoUrl: string;
   }
-
   export type RootStackParamList = {
     Home: undefined;
-    AddWorkout: { day: string; userId: number; workoutPlanName: string };
-    WorkoutDetail: { workoutId: number };
+    AddWorkout: { day: string; workoutPlanName: string };
     WorkoutDay: { day: string; workout: string };
-    Profile: undefined;
-    Onboarding: undefined;
+    EditWorkout: { day: string };
     Explore: undefined;
     ExerciseDetail: { exercise: Exercise };
+    Profile: undefined;
+    Onboarding: undefined;
   };

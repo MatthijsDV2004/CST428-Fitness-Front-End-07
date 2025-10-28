@@ -2,9 +2,8 @@ import React from "react";
 import { router } from "expo-router";
 import { ViewStyle, TextInput, Button, TextStyle } from "react-native";
 import { Controller, useForm, SubmitErrorHandler, FieldValues } from 'react-hook-form';
-import { createProfile } from "@/db/profile";
-
-import type { OnboardingForm } from "@/types/onboarding";
+import { useRepos } from "@/db/index";
+import type { OnboardingForm } from "@/types/types";
 
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
@@ -14,20 +13,43 @@ import useProfile from "@/hooks/useProfile";
 
 export default function OnboardingScreen() {
     const { session } = useSession();
+    const { users, profiles, db } = useRepos();
     const { control, handleSubmit, formState: { errors }, register, reset } = useForm<OnboardingForm>({
         mode: 'onChange'
     });
 
     const onSubmit = async (data: any) => {
-        await createProfile({
-            user_id: Number(session) || 0,
-            age: data.age,
-            weight: data.weight,
-            height: data.heightFeet * 12 + data.heightInches,
-        });
-        useProfile()
-        router.replace("/");
-    };
+        if (!session) return;
+      
+        const existingUser = await users.getByEmail(session);
+        const userId = existingUser?.id;
+        if (!userId) {
+          console.error("No local user found for email:", session);
+          return;
+        }
+      
+        const age   = data?.age != null ? Number(data.age) : null;
+        const weight = data?.weight != null ? Number(data.weight) : null;
+      
+        const hFeet   = data?.heightFeet != null ? Number(data.heightFeet) : null;
+        const hInches = data?.heightInches != null ? Number(data.heightInches) : null;
+        const height =
+          hFeet != null && hInches != null ? hFeet * 12 + hInches : null;
+      
+        
+      
+          await db.withTransactionAsync(async () => {
+                      await profiles.create({
+                       user_id: userId,
+                        age,
+                        weight,
+                        height,
+                        skill_level: data?.skill_level ?? "Beginner",
+                      });
+                    });
+            
+                    router.replace("/");
+      };
 
     const onError: SubmitErrorHandler<FieldValues> = (errors, e) => {
         return console.log(errors)
@@ -48,7 +70,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="5"
                                 />
@@ -70,7 +92,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="11"
                                 />
@@ -98,7 +120,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="150"
                                 />
@@ -125,7 +147,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="25"
                                 />

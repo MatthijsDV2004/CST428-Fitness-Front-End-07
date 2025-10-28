@@ -19,7 +19,6 @@ export default function ExerciseDetailScreen() {
   const [exerciseDetail, setExerciseDetail] = useState<Exercise | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Always fetch on mount
   useEffect(() => {
     let active = true;
     (async () => {
@@ -37,7 +36,6 @@ export default function ExerciseDetailScreen() {
     };
   }, [exercise.workoutID]);
 
-  // 🔹 Always define values, even before data loads
   const videoUrl =
     (exerciseDetail && exerciseDetail.videoUrl?.trim()) || "about:blank";
 
@@ -55,7 +53,6 @@ export default function ExerciseDetailScreen() {
     }
   });
 
-  // ✅ Hooks above this point always run in same order
 
   if (loading) {
     return (
@@ -91,7 +88,6 @@ export default function ExerciseDetailScreen() {
           Muscle Group: {exerciseDetail.muscleGroup}
         </ThemedText>
 
-        {/* ✅ Always render VideoView — it’s safe with about:blank */}
         <VideoView
           style={styles.video}
           player={player}
@@ -101,7 +97,6 @@ export default function ExerciseDetailScreen() {
             autoExitOnRotate: true
           }}
           
-          // Optional prop for some SDKs
           // @ts-ignore
           allowsPictureInPicture
           // @ts-ignore

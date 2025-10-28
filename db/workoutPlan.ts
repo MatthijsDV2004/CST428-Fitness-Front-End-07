@@ -1,141 +1,119 @@
-import * as SQLite from "expo-sqlite";
+import type { SQLiteDatabase } from "expo-sqlite";
+import { toNullableNumber } from "@/db/sanitize";
 
-let db: SQLite.SQLiteDatabase | null = null;
-
-//Function to initialize and get the database
-const getDatabase = async () => {
-    if (!db) {
-        db = await SQLite.openDatabaseAsync("flexzone_database.db");
-        console.log(" Database initialized!");
-    }
-    return db;
+export type WorkoutExercise = {
+  name: string;
+  sets: number;
+  reps: number;
 };
 
-export const addExerciseToWorkoutPlan = async (
-    userId: string,
-    workoutPlanName: string,
-    exerciseName: string,
-    day: string,
-    sets: number,
-    reps: number
-) => {
-    console.log("Inside addExerciseToWorkoutPlan function");
-
-    try {
-        const db = await getDatabase(); // Getting database instance
-
-        type Exercise = { id: number };
-        type WorkoutPlan = { id: number };
-
+export function makeWorkoutPlansRepo(db: SQLiteDatabase) {
+  return {
+    async addExerciseToWorkoutPlan(
+      userId: number,
+      workoutPlanName: string,
+      exerciseName: string,
+      day: string,
+      sets: number,
+      reps: number
+    ): Promise<boolean> {
+      try {
         let exerciseId: number | null = null;
         let workoutPlanId: number | null = null;
 
-        // Check if exercise exists
-        const existingExercise = (await db.getFirstAsync("SELECT id FROM exercise WHERE name = ?", [exerciseName])) as Exercise | undefined;
+        const existingExercise = await db.getFirstAsync<{ id: number }>(
+          "SELECT id FROM exercise WHERE name = ?",
+          [exerciseName]
+        );
+
         if (existingExercise) {
-            exerciseId = existingExercise.id;
-            console.log(`Found Exercise ID: ${exerciseId}`);
+          exerciseId = existingExercise.id;
         } else {
-            console.log(`Inserting new exercise: ${exerciseName}`);
-            const result = await db.runAsync("INSERT INTO exercise (name) VALUES (?)", exerciseName);
-            exerciseId = result?.lastInsertRowId || null;
-            console.log(`New Exercise ID: ${exerciseId}`);
+          const result = await db.runAsync(
+            "INSERT INTO exercise (name) VALUES (?)",
+            [exerciseName]
+          );
+          exerciseId = result?.lastInsertRowId ?? null;
         }
 
-        if (!exerciseId) {
-            console.error("Failed to retrieve exercise ID");
-            return false;
-        }
+        if (!exerciseId) return false;
 
-        // Check if workout plan exists
-        const existingPlan = (await db.getFirstAsync("SELECT id FROM workout_plan WHERE user_id = ? AND name = ?", [userId, workoutPlanName])) as WorkoutPlan | undefined;
+        const existingPlan = await db.getFirstAsync<{ id: number }>(
+          "SELECT id FROM workoutPlan WHERE user_id = ? AND name = ?",
+          [userId, workoutPlanName]
+        );
+
         if (existingPlan) {
-            workoutPlanId = existingPlan.id;
-            console.log(`Found Workout Plan ID: ${workoutPlanId}`);
+          workoutPlanId = existingPlan.id;
         } else {
-            console.log(`🆕 Inserting new workout plan: ${workoutPlanName}`);
-            const result = await db.runAsync("INSERT INTO workout_plan (user_id, name) VALUES (?, ?)", userId, workoutPlanName);
-            workoutPlanId = result?.lastInsertRowId || null;
-            console.log(`New Workout Plan ID: ${workoutPlanId}`);
+          const result = await db.runAsync(
+            "INSERT INTO workoutPlan (user_id, name) VALUES (?, ?)",
+            [userId, workoutPlanName]
+          );
+          workoutPlanId = result?.lastInsertRowId ?? null;
         }
 
-        if (!workoutPlanId) {
-            console.error("Failed to retrieve workout plan ID");
-            return false;
-        }
+        if (!workoutPlanId) return false;
 
-        // Insert into `workout_plan_exercises`
-        console.log("Inserting exercise into workout_plan_exercises...");
         await db.runAsync(
-            "INSERT INTO workout_plan_exercises (workout_plan_id, exercise_id, day, sets, reps) VALUES (?, ?, ?, ?, ?)",
-            workoutPlanId, exerciseId, day, sets, reps
+          "INSERT INTO workoutPlanExercises (workout_plan_id, exercise_id, day, sets, reps) VALUES (?, ?, ?, ?, ?)",
+          [workoutPlanId, exerciseId, day, toNullableNumber(sets), toNullableNumber(reps)]
         );
 
         console.log("Exercise successfully added to workout plan!");
         return true;
-    } catch (error) {
-        console.error("SQL Error:", error);
+      } catch (error) {
+        console.error("addExerciseToWorkoutPlan error:", error);
         return false;
-    }
-};
+      }
+    },
 
-//need type for sennding data to WorkoutDay.tsx
-export type WorkoutExercise = {
-    name: string;
-    sets: number;
-    reps: number;
-};
-
-export const fetchWorkoutExercises = async (day: string): Promise<WorkoutExercise[]> => {
-    const db = await getDatabase();
-
-    try {
-
+    async fetchWorkoutExercises(day: string): Promise<WorkoutExercise[]> {
+      try {
         const result = (await db.getAllAsync(
-            `SELECT e.name, we.sets, we.reps 
-         FROM workout_plan_exercises we 
-         JOIN exercise e ON we.exercise_id = e.id 
-         WHERE we.day = ?`,
-            [day]
+          `SELECT e.name, we.sets, we.reps
+             FROM workoutPlanExercises we
+             JOIN exercise e ON we.exercise_id = e.id
+             WHERE we.day = ?`,
+          [day]
         )) as WorkoutExercise[];
-
         return result;
-    } catch (error) {
+      } catch (error) {
+        console.error("fetchWorkoutExercises error:", error);
         return [];
-    }
-};
+      }
+    },
 
-
-// Update sets and reps using name instead of id
-export const updateWorkoutExerciseByName = async (name: string, sets: number, reps: number) => {
-    const db = await getDatabase();
-
-    try {
+    async updateWorkoutExerciseByName(
+      name: string,
+      sets: number,
+      reps: number
+    ): Promise<boolean> {
+      try {
         await db.runAsync(
-            "UPDATE workout_plan_exercises SET sets = ?, reps = ? WHERE exercise_id = (SELECT id FROM exercise WHERE name = ?)",
-            sets, reps, name
+          "UPDATE workoutPlanExercises SET sets = ?, reps = ? WHERE exercise_id = (SELECT id FROM exercise WHERE name = ?)",
+          [toNullableNumber(sets), toNullableNumber(reps), name]
         );
-        console.log(`✅ Updated ${name} with ${sets} sets and ${reps} reps.`);
+        console.log(`Updated ${name}: ${sets} sets × ${reps} reps`);
         return true;
-    } catch (error) {
-        console.error("Error updating workout exercise:", error);
+      } catch (error) {
+        console.error("updateWorkoutExerciseByName error:", error);
         return false;
-    }
-};
+      }
+    },
 
-// Delete an exercise using name instead of id
-export const deleteExerciseFromWorkoutPlanByName = async (name: string) => {
-    const db = await getDatabase();
-
-    try {
+    async deleteExerciseFromWorkoutPlanByName(name: string): Promise<boolean> {
+      try {
         await db.runAsync(
-            "DELETE FROM workout_plan_exercises WHERE exercise_id = (SELECT id FROM exercise WHERE name = ?)",
-            [name]
+          "DELETE FROM workoutPlanExercises WHERE exercise_id = (SELECT id FROM exercise WHERE name = ?)",
+          [name]
         );
-        console.log(`✅ Deleted exercise ${name} from workout plan.`);
+        console.log(`Deleted ${name} from workout plan`);
         return true;
-    } catch (error) {
-        console.error("Error deleting exercise:", error);
+      } catch (error) {
+        console.error("deleteExerciseFromWorkoutPlanByName error:", error);
         return false;
-    }
-};
+      }
+    },
+  };
+}

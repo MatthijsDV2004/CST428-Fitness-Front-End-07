@@ -2,11 +2,13 @@ import { Exercise } from "@/types/types";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
-const LOCAL_IP = "10.11.116.234";
-const LOCAL_URL = `http://${LOCAL_IP}:8080`;
-const PROD_URL = "https://cst438-d5640ff12bdc.herokuapp.com";
+const API_BASE_URL =
+  (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ??
+  "https://cst438-d5640ff12bdc.herokuapp.com";
+// const LOCAL_IP = "10.0.2.2";
+// const LOCAL_URL = `http://${LOCAL_IP}:8080`;
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || PROD_URL;
+// const API_BASE_URL = LOCAL_URL;
 
 console.log("🔗 Fetching workouts from:", `${API_BASE_URL}/getWorkouts`);
 
