@@ -11,6 +11,7 @@ import { getProfile } from '@/db/profile';
 import { ProfilePic } from '@/components/ProfilePic';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import useProfile from '@/hooks/useProfile';
+import { initDB } from '@/db/init';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -20,6 +21,7 @@ export default function TabLayout() {
 
   // 2️⃣ declare every other hook *before* any return
   useEffect(() => {
+    
     if (!session) return; // safe to guard inside the hook
     const loadProfile = async () => {
       try {

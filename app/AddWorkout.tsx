@@ -1,88 +1,101 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, FlatList, TouchableOpacity, TextInput, View } from 'react-native';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { RootStackParamList } from '@/types/navigation';
-import { Exercise } from '@/types/exercise';
-import { getWorkouts } from '@/api/workOutAPI';
-import { addExerciseToWorkoutPlan } from '@/db/workoutPlan';
+import React, { useEffect, useState } from "react";
+import {
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  View,
+  ActivityIndicator,
+  Keyboard,
+} from "react-native";
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import { ThemedView } from "@/components/ThemedView";
+import { ThemedText } from "@/components/ThemedText";
+import { RootStackParamList, Exercise } from "@/types/types";
+import {
+  getPlansByDay,
+  createPlan,
+  addExerciseToPlan,
+} from "@/api/plan";
+import { getWorkouts } from "@/api/workOutAPI";
+import * as SecureStore from "expo-secure-store";
 
 export default function AddWorkoutScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "AddWorkout">>();
   const navigation = useNavigation();
-  const { day, userId, workoutPlanName } = route.params;
+  const { day, workoutPlanName } = route.params;
 
-  // useStates for holding user inputs for exercise, reps, sets, etc.
+  const [searchTerm, setSearchTerm] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedExercise, setSelectedExercise] = useState("");
-  const [sets, setSets] = useState('');
-  const [reps, setReps] = useState('');
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [sets, setSets] = useState("");
+  const [reps, setReps] = useState("");
 
-  const addWorkout = async () => {
-    console.log("Add Workout button clicked!");
-    if (!selectedExercise || !sets || !reps) {
-      console.error("Please fill in all fields.");
+  // ✅ Live search with debounce
+  useEffect(() => {
+    if (searchTerm.trim().length < 1) {
+      setExercises([]);
       return;
     }
 
-    console.log(`Attempting to add: ${selectedExercise}, Sets: ${sets}, Reps: ${reps}`);
-
-    try {
-      const success = await addExerciseToWorkoutPlan(
-        userId,
-        workoutPlanName,
-        selectedExercise,
-        day,
-        parseInt(sets),
-        parseInt(reps)
-      );
-
-      if (success) {
-        console.log("Exercise successfully added!");
-        setSelectedExercise("");
-        setSets("");
-        setReps("");
-        alert("Workout added! Add another or go back.");
-      } else {
-        console.error("Failed to add exercise.");
-      }
-    } catch (error) {
-      console.error("Error calling addExerciseToWorkoutPlan:", error);
-    }
-  };
-
-  // calls API to search for exercise by name
-  useEffect(() => {
-    if (!searchTerm) return;
-
-    const fetchExercises = async () => {
-      setLoading(true);
+    const delayDebounce = setTimeout(async () => {
       try {
-        const exercises = await getWorkouts({ name: searchTerm });
-        console.log("Fetched exercises:", exercises);
-        setExercises(exercises);
-      } catch (error) {
-        console.error('Error fetching exercises:', error);
+        setLoading(true);
+        const results = await getWorkouts({ name: searchTerm });
+        setExercises(results);
+      } catch (err) {
+        console.error("❌ Error fetching workouts:", err);
       } finally {
         setLoading(false);
       }
-    };
+    }, 300);
 
-    fetchExercises();
+    return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
-  // shows loading message while fetching exercises
-  if (loading) {
-    return (
-      <ThemedView style={styles.container}>
-        <ThemedText>Loading exercises...</ThemedText>
-      </ThemedView>
-    );
-  }
+  // ✅ Add selected exercise to backend
+  const addWorkout = async () => {
+    if (!selectedExercise || !sets || !reps) {
+      alert("⚠️ Please select an exercise and enter sets/reps.");
+      return;
+    }
+
+    try {
+      const googleId = await SecureStore.getItemAsync("googleId");
+      if (!googleId) {
+        alert("⚠️ Google ID not found. Please sign in again.");
+        return;
+      }
+
+      const existing = await getPlansByDay(googleId, day);
+      let planId: number;
+
+      if (existing.length > 0) {
+        planId = existing[0].id;
+      } else {
+        const newPlan = await createPlan({ googleId, name: workoutPlanName, day });
+        planId = newPlan.id;
+      }
+
+      await addExerciseToPlan(planId, {
+        name: selectedExercise.workoutName,
+        sets: parseInt(sets),
+        reps: parseInt(reps),
+      });
+
+      alert(`✅ Added ${selectedExercise.workoutName} to ${day}!`);
+      setSelectedExercise(null);
+      setSets("");
+      setReps("");
+      setSearchTerm("");
+      setExercises([]);
+      Keyboard.dismiss();
+    } catch (error) {
+      console.error("❌ Error adding exercise:", error);
+      alert("Failed to add exercise. Try again.");
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -91,57 +104,77 @@ export default function AddWorkoutScreen() {
         <ThemedText style={styles.backArrow}>←</ThemedText>
       </TouchableOpacity>
 
-      <ThemedText type="title">Add a Workout</ThemedText>
+      <ThemedText type="title" style={{ marginBottom: 10 }}>
+        Add a Workout
+      </ThemedText>
 
-      <ThemedText style={styles.placeholder}>Select Exercise</ThemedText>
+      {/* Search Input */}
       <TextInput
         style={styles.input}
-        placeholder='Exercise Search'
-        value={name}
-        onChangeText={(text) => setName(text)}
-        onSubmitEditing={() => setSearchTerm(name)}
+        placeholder="Search for an exercise..."
+        value={searchTerm}
+        onChangeText={(text) => setSearchTerm(text)}
+        placeholderTextColor="#888"
+        autoCapitalize="none"
+        autoCorrect={false}
       />
 
-      {/* Shows results from API search */}
-      <FlatList
-  data={exercises ?? []}
-  keyExtractor={(item) => item.workoutID?.toString() ?? Math.random().toString()}
-  renderItem={({ item }) => (
-    <TouchableOpacity onPress={() => setSelectedExercise(item.workoutName)}>
-      <ThemedView style={styles.exerciseCard}>
-        <ThemedText style={styles.exerciseTitle}>
-          {item.workoutName}
-        </ThemedText>
-        <ThemedText>{item.muscleGroup}</ThemedText>
-        <ThemedText style={{ fontStyle: "italic" }}>
-          {item.workoutDesc}
-        </ThemedText>
-      </ThemedView>
-    </TouchableOpacity>
-  )}
-/>
+      {loading ? (
+        <ActivityIndicator size="large" color="#888" style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList
+          data={exercises}
+          keyExtractor={(item) => item.workoutID.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedExercise(item);
+                setSearchTerm(item.workoutName);
+                setExercises([]);
+              }}
+            >
+              <ThemedView style={styles.exerciseCard}>
+                <ThemedText style={styles.exerciseTitle}>{item.workoutName}</ThemedText>
+                <ThemedText>{item.muscleGroup}</ThemedText>
+                <ThemedText style={{ fontStyle: "italic" }}>
+                  {item.workoutDesc}
+                </ThemedText>
+              </ThemedView>
+            </TouchableOpacity>
+          )}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.exerciseList}
+        />
+      )}
 
-      <ThemedText style={styles.placeholder}>{selectedExercise}</ThemedText>
-      <ThemedText style={styles.placeholder3}>Enter Sets and Reps Below</ThemedText>
-      <ThemedText style={styles.placeholder2}>Sets</ThemedText>
-      <TextInput
-        style={styles.input}
-        placeholder='Number of Sets'
-        keyboardType="numeric"
-        value={sets}
-        onChangeText={setSets}
-      />
-      <ThemedText style={styles.placeholder2}>Reps</ThemedText>
-      <TextInput
-        style={styles.input}
-        placeholder='Number of Reps'
-        keyboardType="numeric"
-        value={reps}
-        onChangeText={setReps}
-      />
-      <TouchableOpacity style={styles.button} onPress={addWorkout}>
-        <ThemedText type="default">Add Workout</ThemedText>
-      </TouchableOpacity>
+      {/* Selected Exercise */}
+      {selectedExercise && (
+        <View style={{ marginTop: 20 }}>
+          <ThemedText type="subtitle">{selectedExercise.workoutName}</ThemedText>
+
+          <ThemedText style={styles.label}>Sets</ThemedText>
+          <TextInput
+            style={styles.input}
+            placeholder="Number of Sets"
+            keyboardType="numeric"
+            value={sets}
+            onChangeText={setSets}
+          />
+
+          <ThemedText style={styles.label}>Reps</ThemedText>
+          <TextInput
+            style={styles.input}
+            placeholder="Number of Reps"
+            keyboardType="numeric"
+            value={reps}
+            onChangeText={setReps}
+          />
+
+          <TouchableOpacity style={styles.button} onPress={addWorkout}>
+            <ThemedText style={styles.buttonText}>Add Workout</ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
     </ThemedView>
   );
 }
@@ -154,65 +187,55 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: "flex-start",
-    marginBottom: 20,
+    marginBottom: 10,
   },
   backArrow: {
     fontSize: 40,
     color: "#333",
   },
-  placeholder: {
-    marginVertical: 10,
-    fontSize: 25,
-    marginTop: 30,
-  },
-  placeholder2: {
-    marginVertical: 10,
-    fontSize: 25,
-    marginTop: 5,
-  },
-  placeholder3: {
-    marginVertical: 20,
-    fontSize: 25,
-    marginTop: 5,
-    fontStyle: "italic",
-  },
   input: {
-    width: '100%',
+    width: "100%",
     padding: 12,
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 5,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 16,
-    marginBottom: 20,
-    fontStyle: "italic",
+    marginBottom: 15,
   },
   exerciseCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: "#000",
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
   },
   exerciseTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    fontStyle: "italic",
+    fontWeight: "bold",
+    marginBottom: 3,
+  },
+  exerciseList: {
+    paddingBottom: 20,
+  },
+  label: {
+    marginTop: 15,
+    fontSize: 18,
+    fontWeight: "500",
   },
   button: {
-    backgroundColor: "#888",
+    backgroundColor: "#4CAF50",
+    marginTop: 25,
     paddingVertical: 15,
-    paddingHorizontal: 25,
-    borderRadius: 5,
+    borderRadius: 8,
     alignItems: "center",
-    marginBottom: 15,
   },
   buttonText: {
     color: "#fff",
-    fontSize: 30,
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });

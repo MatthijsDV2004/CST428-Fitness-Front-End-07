@@ -4,7 +4,7 @@ import { ViewStyle, TextInput, Button, TextStyle } from "react-native";
 import { Controller, useForm, SubmitErrorHandler, FieldValues } from 'react-hook-form';
 import { createProfile } from "@/db/profile";
 
-import type { OnboardingForm } from "@/types/onboarding";
+import type { OnboardingForm } from "@/types/types";
 
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
