@@ -1,6 +1,6 @@
 import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
-import ExploreScreen from "../explore";
+import ExploreScreen from "../app/(tabs)/explore";
 import { getWorkouts } from "@/api/workOutAPI";
 import { useNavigation } from "@react-navigation/native";
 import { Text } from "react-native";

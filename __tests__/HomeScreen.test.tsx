@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
-import HomeScreen from "../index";
+import HomeScreen from "../app/(tabs)/index";
 import * as SecureStore from "expo-secure-store";
 import { getPlansByDay, createPlan } from "@/api/plan";
 import useProfile from "@/hooks/useProfile";

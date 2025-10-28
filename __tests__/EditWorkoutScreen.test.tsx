@@ -1,6 +1,6 @@
 import React from "react";
 import { render, waitFor, fireEvent, act } from "@testing-library/react-native";
-import EditWorkoutScreen from "../EditWorkout";
+import EditWorkoutScreen from "../app/EditWorkout";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
 import { getPlansByDay, updateExerciseInPlan, deleteExerciseFromPlan } from "@/api/plan";

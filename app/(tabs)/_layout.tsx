@@ -19,10 +19,9 @@ export default function TabLayout() {
   const { profile } = useProfile();
   
 
-  // 2️⃣ declare every other hook *before* any return
   useEffect(() => {
     
-    if (!session) return; // safe to guard inside the hook
+    if (!session) return; 
     const loadProfile = async () => {
       try {
         const res = await getProfile(session);
@@ -35,11 +34,9 @@ export default function TabLayout() {
     loadProfile();
   }, [session]);
 
-  // 3️⃣ only conditional rendering after hooks
   if (isLoading) return null;
   if (!session) return <Redirect href="/auth" />;
 
-  // 4️⃣ main UI
   return (
     <Tabs
       screenOptions={{

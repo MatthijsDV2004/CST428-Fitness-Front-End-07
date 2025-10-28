@@ -45,13 +45,13 @@ export default function WorkoutDayScreen() {
           setWorkoutName(plan.name || workout);
           // Once backend includes exercises for plan, map them here:
           setWorkoutExercises(plan.exercises || []);
-          console.log("✅ Loaded plan:", plan);
+          console.log("Loaded plan:", plan);
         } else {
           setWorkoutExercises([]);
-          console.log("ℹ️ No plan found for this day.");
+          console.log("No plan found for this day.");
         }
       } catch (error) {
-        console.error("❌ Failed to load plan data:", error);
+        console.error("Failed to load plan data:", error);
       } finally {
         setLoading(false);
       }
@@ -74,7 +74,7 @@ export default function WorkoutDayScreen() {
         await createPlan({ googleId, name: newName, day });
       }
     } catch (err) {
-      console.error("❌ Error saving workout name:", err);
+      console.error("Error saving workout name:", err);
     }
   };
   if (loading) {
@@ -112,14 +112,14 @@ export default function WorkoutDayScreen() {
 
         const planId = plans[0].id;
         await updatePlan(planId, { googleId, name: text, day });
-        console.log(`✅ Updated plan ${planId} to "${text}"`);
+        console.log(`Updated plan ${planId} to "${text}"`);
       } else {
 
         await createPlan({ googleId, name: text, day });
-        console.log(`🆕 Created new plan "${text}" for ${day}`);
+        console.log(`Created new plan "${text}" for ${day}`);
       }
     } catch (err) {
-      console.error("❌ Error saving workout name:", err);
+      console.error("Error saving workout name:", err);
     }
   }}
   placeholder="Enter Workout Name"

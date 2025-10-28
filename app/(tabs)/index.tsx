@@ -55,7 +55,7 @@ export default function HomeScreen() {
 
       setPlans(allPlans);
     } catch (error) {
-      console.error("❌ Error fetching plans:", error);
+      console.error("Error fetching plans:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -88,7 +88,7 @@ export default function HomeScreen() {
       });
       await fetchPlans();
     } catch (err) {
-      console.error("❌ Error creating plan:", err);
+      console.error("Error creating plan:", err);
     }
   };
 

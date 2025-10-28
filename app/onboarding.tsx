@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { ViewStyle, TextInput, Button, TextStyle } from "react-native";
 import { Controller, useForm, SubmitErrorHandler, FieldValues } from 'react-hook-form';
 import { createProfile } from "@/db/profile";
-
+import { getProfile } from "@/db/profile"
 import type { OnboardingForm } from "@/types/types";
 
 import { ThemedView } from "@/components/ThemedView";
@@ -19,15 +19,31 @@ export default function OnboardingScreen() {
     });
 
     const onSubmit = async (data: any) => {
-        await createProfile({
-            user_id: Number(session) || 0,
-            age: data.age,
-            weight: data.weight,
-            height: data.heightFeet * 12 + data.heightInches,
-        });
-        useProfile()
+        // session is the email string (see hooks/ctx.tsx)
+        if (!session) return;
+      
+        // Get the local user row so we have the numeric user.id
+        const existing = await getProfile(session);
+        // getProfile() always selects the user by email first
+        const userId = existing?.user?.id;
+        if (!userId) {
+          console.error("No local user found for email:", session);
+          return;
+        }
+      
+        // Coerce inputs to numbers or null
+        const age   = data?.age != null ? Number(data.age) : null;
+        const weight = data?.weight != null ? Number(data.weight) : null;
+      
+        const hFeet   = data?.heightFeet != null ? Number(data.heightFeet) : null;
+        const hInches = data?.heightInches != null ? Number(data.heightInches) : null;
+        const height =
+          hFeet != null && hInches != null ? hFeet * 12 + hInches : null;
+      
+        
+      
         router.replace("/");
-    };
+      };
 
     const onError: SubmitErrorHandler<FieldValues> = (errors, e) => {
         return console.log(errors)
@@ -48,7 +64,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="5"
                                 />
@@ -70,7 +86,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="11"
                                 />
@@ -98,7 +114,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="150"
                                 />
@@ -125,7 +141,7 @@ export default function OnboardingScreen() {
                                     style={$numericInput}
                                     onBlur={onBlur}
                                     onChangeText={(text) => onChange(Number(text))}
-                                    value={value}
+                                    // value={value}
                                     keyboardType="numeric"
                                     placeholder="25"
                                 />

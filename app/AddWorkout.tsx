@@ -32,7 +32,6 @@ export default function AddWorkoutScreen() {
   const [sets, setSets] = useState("");
   const [reps, setReps] = useState("");
 
-  // ✅ Live search with debounce
   useEffect(() => {
     if (searchTerm.trim().length < 1) {
       setExercises([]);
@@ -45,7 +44,7 @@ export default function AddWorkoutScreen() {
         const results = await getWorkouts({ name: searchTerm });
         setExercises(results);
       } catch (err) {
-        console.error("❌ Error fetching workouts:", err);
+        console.error("Error fetching workouts:", err);
       } finally {
         setLoading(false);
       }
@@ -54,7 +53,6 @@ export default function AddWorkoutScreen() {
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
-  // ✅ Add selected exercise to backend
   const addWorkout = async () => {
     if (!selectedExercise || !sets || !reps) {
       alert("⚠️ Please select an exercise and enter sets/reps.");
@@ -84,7 +82,7 @@ export default function AddWorkoutScreen() {
         reps: parseInt(reps),
       });
 
-      alert(`✅ Added ${selectedExercise.workoutName} to ${day}!`);
+      alert(`Added ${selectedExercise.workoutName} to ${day}!`);
       setSelectedExercise(null);
       setSets("");
       setReps("");
@@ -92,7 +90,7 @@ export default function AddWorkoutScreen() {
       setExercises([]);
       Keyboard.dismiss();
     } catch (error) {
-      console.error("❌ Error adding exercise:", error);
+      console.error("Error adding exercise:", error);
       alert("Failed to add exercise. Try again.");
     }
   };
@@ -108,7 +106,6 @@ export default function AddWorkoutScreen() {
         Add a Workout
       </ThemedText>
 
-      {/* Search Input */}
       <TextInput
         style={styles.input}
         placeholder="Search for an exercise..."
@@ -147,7 +144,6 @@ export default function AddWorkoutScreen() {
         />
       )}
 
-      {/* Selected Exercise */}
       {selectedExercise && (
         <View style={{ marginTop: 20 }}>
           <ThemedText type="subtitle">{selectedExercise.workoutName}</ThemedText>

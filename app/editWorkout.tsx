@@ -42,14 +42,14 @@ export default function EditWorkoutScreen() {
         if (plans.length > 0) {
           const plan = plans[0];
           setPlanId(plan.id);
-          setWorkoutExercises(plan.exercises || []); // backend should eventually return exercises
-          console.log("✅ Loaded plan for editing:", plan);
+          setWorkoutExercises(plan.exercises || []); 
+          console.log("Loaded plan for editing:", plan);
         } else {
-          console.warn("ℹ️ No plan found for this day");
+          console.warn("No plan found for this day");
           setWorkoutExercises([]);
         }
       } catch (error) {
-        console.error("❌ Failed to load plan data:", error);
+        console.error("Failed to load plan data:", error);
       } finally {
         setLoading(false);
       }
@@ -58,17 +58,16 @@ export default function EditWorkoutScreen() {
     loadPlanData();
   }, [day]);
 
-  // Update sets or reps for an exercise (backend future extension)
   const handleUpdateExercise = async (name: string, sets: number, reps: number) => {
     if (!planId) return;
     try {
       await updateExerciseInPlan(planId, name, { sets, reps });
-      console.log("✅ Updated exercise:", name);
+      console.log("Updated exercise:", name);
       setWorkoutExercises((prev) =>
         prev.map((ex) => (ex.name === name ? { ...ex, sets, reps } : ex))
       );
     } catch (err) {
-      console.error("❌ Error updating exercise:", err);
+      console.error("Error updating exercise:", err);
     }
   };
 
@@ -77,12 +76,12 @@ export default function EditWorkoutScreen() {
     if (!planId) return;
     try {
       await deleteExerciseFromPlan(planId, name);
-      console.log("🗑️ Deleted exercise:", name);
+      console.log("Deleted exercise:", name);
       setWorkoutExercises((prev) =>
         prev.filter((exercise) => exercise.name !== name)
       );
     } catch (err) {
-      console.error("❌ Error deleting exercise:", err);
+      console.error("Error deleting exercise:", err);
     }
   };
 

@@ -35,7 +35,6 @@ export default function ExploreScreen() {
     { label: "Full Body", value: "Full Body" },
   ];
 
-  // ✅ Fetch workouts whenever searchTerm or muscle changes
   useEffect(() => {
     const fetchExercises = async () => {
       setLoading(true);
@@ -47,7 +46,7 @@ export default function ExploreScreen() {
         const data = await getWorkouts(params);
         setExercises(data);
       } catch (err) {
-        console.error("❌ Error fetching exercises:", err);
+        console.error("Error fetching exercises:", err);
       } finally {
         setLoading(false);
       }
@@ -59,12 +58,10 @@ export default function ExploreScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Title */}
       <View style={styles.header}>
         <ThemedText type="title">Explore Exercises</ThemedText>
       </View>
 
-      {/* Search Bar */}
       <TextInput
         style={styles.searchInput}
         placeholder="Search exercises..."
@@ -75,7 +72,6 @@ export default function ExploreScreen() {
         autoCorrect={false}
       />
 
-      {/* Muscle Filter */}
       <Picker
         selectedValue={selectedMuscle}
         onValueChange={(itemValue) => setSelectedMuscle(itemValue)}
@@ -86,7 +82,6 @@ export default function ExploreScreen() {
         ))}
       </Picker>
 
-      {/* Exercise List */}
       {loading ? (
         <ActivityIndicator testID="loading-indicator"  size="large" color="#888" style={{ marginTop: 30 }} />
 

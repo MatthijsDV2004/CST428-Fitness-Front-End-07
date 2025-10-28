@@ -1,6 +1,6 @@
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
-import ProfileScreen from "../profile";
+import ProfileScreen from "../app/(tabs)/profile";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
 import { ProfilePic } from "@/components/ProfilePic";
@@ -41,6 +41,7 @@ describe("ProfileScreen", () => {
     });
 
     const { getByText } = render(<ProfileScreen />);
+    
 
     expect(getByText("Matthijs")).toBeTruthy();
     expect(getByText("matthijs@example.com")).toBeTruthy();
@@ -55,13 +56,14 @@ describe("ProfileScreen", () => {
       },
     };
     (useProfile as jest.Mock).mockReturnValue({ profile: mockProfile });
-
+  
     render(<ProfileScreen />);
-
-    expect(ProfilePic).toHaveBeenCalledWith(
-      { uri: "https://example.com/avatar.png" },
-      {}
-    );
+  
+    const calls = (ProfilePic as jest.Mock).mock.calls;
+    expect(calls.length).toBe(1);
+  
+    const [props] = calls[0];
+    expect(props).toEqual(expect.objectContaining({ uri: "https://example.com/avatar.png" }));
   });
 
   it("calls signOut when Sign Out button is pressed", () => {
