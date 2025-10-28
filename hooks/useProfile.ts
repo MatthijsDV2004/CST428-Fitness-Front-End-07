@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getProfile } from "@/db/profile";
+import { useRepos } from "@/db/index";
 import { useSession } from "./ctx";
 import type { User, Profile } from "@/types/types";
 
@@ -11,17 +11,16 @@ interface ProfileData {
 const useProfile = () => {
   const { session } = useSession();
   const [profile, setProfile] = useState<ProfileData | null>(null);
-
+  const { profiles } = useRepos();
   useEffect(() => {
     if (!session) return;
 
-    getProfile(session)
-      .then((res) => {
-        if (res) {
-          setProfile(res); // ✅ now perfectly typed
-        }
-      })
-      .catch((err) => console.error(err));
+    profiles
+          .getUserAndProfileByEmail(session)
+          .then((res) => {
+            if (res) setProfile(res);
+          })
+          .catch((err) => console.error(err));
   }, [session]);
 
   return { profile };

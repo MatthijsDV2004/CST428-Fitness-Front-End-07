@@ -2,8 +2,7 @@ import React from "react";
 import { router } from "expo-router";
 import { ViewStyle, TextInput, Button, TextStyle } from "react-native";
 import { Controller, useForm, SubmitErrorHandler, FieldValues } from 'react-hook-form';
-import { createProfile } from "@/db/profile";
-import { getProfile } from "@/db/profile"
+import { useRepos } from "@/db/index";
 import type { OnboardingForm } from "@/types/types";
 
 import { ThemedView } from "@/components/ThemedView";
@@ -14,24 +13,21 @@ import useProfile from "@/hooks/useProfile";
 
 export default function OnboardingScreen() {
     const { session } = useSession();
+    const { users, profiles, db } = useRepos();
     const { control, handleSubmit, formState: { errors }, register, reset } = useForm<OnboardingForm>({
         mode: 'onChange'
     });
 
     const onSubmit = async (data: any) => {
-        // session is the email string (see hooks/ctx.tsx)
         if (!session) return;
       
-        // Get the local user row so we have the numeric user.id
-        const existing = await getProfile(session);
-        // getProfile() always selects the user by email first
-        const userId = existing?.user?.id;
+        const existingUser = await users.getByEmail(session);
+        const userId = existingUser?.id;
         if (!userId) {
           console.error("No local user found for email:", session);
           return;
         }
       
-        // Coerce inputs to numbers or null
         const age   = data?.age != null ? Number(data.age) : null;
         const weight = data?.weight != null ? Number(data.weight) : null;
       
@@ -42,7 +38,17 @@ export default function OnboardingScreen() {
       
         
       
-        router.replace("/");
+          await db.withTransactionAsync(async () => {
+                      await profiles.create({
+                       user_id: userId,
+                        age,
+                        weight,
+                        height,
+                        skill_level: data?.skill_level ?? "Beginner",
+                      });
+                    });
+            
+                    router.replace("/");
       };
 
     const onError: SubmitErrorHandler<FieldValues> = (errors, e) => {

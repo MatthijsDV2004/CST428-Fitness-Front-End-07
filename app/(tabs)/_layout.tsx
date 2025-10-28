@@ -7,7 +7,7 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSession } from '@/hooks/ctx';
-import { getProfile } from '@/db/profile';
+import { useRepos } from '@/db/index';
 import { ProfilePic } from '@/components/ProfilePic';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import useProfile from '@/hooks/useProfile';
@@ -17,14 +17,14 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { session, isLoading } = useSession();
   const { profile } = useProfile();
-  
+  const { profiles } = useRepos();
 
   useEffect(() => {
     
     if (!session) return; 
     const loadProfile = async () => {
       try {
-        const res = await getProfile(session);
+        const res = await profiles.getUserAndProfileByEmail(session);
         if (res && session) router.push("/(tabs)");
         else router.push("/onboarding");
       } catch (err) {

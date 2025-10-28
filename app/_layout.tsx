@@ -31,13 +31,14 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style = {styles.container}>
-      <SessionProvider>
       <SQLiteProvider databaseName='flexzone_database.db' onInit={initDB} >
+      <SessionProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Slot />
         </ThemeProvider>
-      </SQLiteProvider>
+      
     </SessionProvider>
+    </SQLiteProvider>
     </GestureHandlerRootView>
     
   );

@@ -13,7 +13,7 @@ import {
 } from "@react-native-google-signin/google-signin";
 import { Platform } from "react-native";
 import { useStorageState } from "./useStorageState";
-import { createUser, getUserByGoogleId } from "@/db/user";
+import { useRepos } from "@/db/index";
 import * as SecureStore from "expo-secure-store";
 
 import type { User, NewUser, GoogleUser } from "@/types/types";
@@ -53,6 +53,7 @@ const mapGoogleToUser = (g: GoogleUser): NewUser => ({
 export function SessionProvider({ children }: PropsWithChildren) {
   const [[isLoading, session], setSession] = useStorageState("session");
   const isSigningInRef = useRef(false);
+  const { users, db } = useRepos();
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -99,7 +100,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         console.error("Backend verification failed:", msg);
         return null;
       }
-
+      //here we log the jwt token
       await SecureStore.setItemAsync("jwt", idToken);
       console.log("JWT token:", idToken);
 
@@ -120,8 +121,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
       }
 
       
-      let dbUser = await getUserByGoogleId(gUser.id);
-      if (!dbUser) dbUser = await createUser(mapGoogleToUser(gUser));
+      let dbUser = await users.getByGoogleId(gUser.id);
+            if (!dbUser) {
+              await db.withTransactionAsync(async () => {
+                dbUser = await users.create(mapGoogleToUser(gUser));
+              });
+            }
 
       setSession(gUser.email);
       return dbUser;
